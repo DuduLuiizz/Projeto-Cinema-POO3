@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastro de Filmes - CineControl</title>
+  <title>Cadastro de Filmes - Cinema Online</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <nav class="navbar">
-    <div class="nav-brand">🎬 CineControl</div>
+    <div class="nav-brand">🎬 Cinema Online</div>
     <ul class="nav-links">
       <li><a href="index.html">Início</a></li>
       <li><a href="cadastro-filmes.html" class="active">Filmes</a></li>
@@ -83,6 +83,8 @@
   </main>
 
   <script>
+    let editandoId = null;
+
     // Carrega a lista de filmes ao abrir a página
     carregarFilmes();
 
@@ -104,24 +106,73 @@
       // Recupera o array de filmes já salvo (ou cria um vazio)
       const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
 
-      // Cria o objeto do novo filme com um id único
-      const novoFilme = {
-        id: Date.now(),
-        titulo,
-        genero,
-        descricao,
-        classificacao,
-        duracao: parseInt(duracao),
-        estreia
-      };
+      if (editandoId) {
+        // Atualizar filme existente
+        const index = filmes.findIndex(f => f.id === editandoId);
+        if (index !== -1) {
+          filmes[index] = {
+            id: editandoId,
+            titulo,
+            genero,
+            descricao,
+            classificacao,
+            duracao: parseInt(duracao),
+            estreia
+          };
+          localStorage.setItem('filmes', JSON.stringify(filmes));
+          mostrarAlerta('Filme atualizado com sucesso!', 'success');
+        }
+      } else {
+        // Cria o objeto do novo filme com um id único
+        const novoFilme = {
+          id: Date.now(),
+          titulo,
+          genero,
+          descricao,
+          classificacao,
+          duracao: parseInt(duracao),
+          estreia
+        };
 
-      // Adiciona o novo filme ao array e salva de volta no localStorage
-      filmes.push(novoFilme);
-      localStorage.setItem('filmes', JSON.stringify(filmes));
+        // Adiciona o novo filme ao array e salva de volta no localStorage
+        filmes.push(novoFilme);
+        localStorage.setItem('filmes', JSON.stringify(filmes));
+        mostrarAlerta('Filme salvo com sucesso!', 'success');
+      }
 
-      mostrarAlerta('Filme salvo com sucesso!', 'success');
       limparFormulario();
       carregarFilmes();
+      resetarEdicao();
+    }
+
+    function editarFilme(id) {
+      const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const filme = filmes.find(f => f.id === id);
+      if (filme) {
+        document.getElementById('titulo').value = filme.titulo;
+        document.getElementById('genero').value = filme.genero;
+        document.getElementById('descricao').value = filme.descricao;
+        document.getElementById('classificacao').value = filme.classificacao;
+        document.getElementById('duracao').value = filme.duracao;
+        document.getElementById('estreia').value = filme.estreia;
+        editandoId = id;
+        document.querySelector('.btn-primary').textContent = 'Atualizar Filme';
+      }
+    }
+
+    function deletarFilme(id) {
+      if (confirm('Tem certeza que deseja excluir este filme?')) {
+        const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
+        const novosFilmes = filmes.filter(f => f.id !== id);
+        localStorage.setItem('filmes', JSON.stringify(novosFilmes));
+        mostrarAlerta('Filme excluído com sucesso!', 'success');
+        carregarFilmes();
+      }
+    }
+
+    function resetarEdicao() {
+      editandoId = null;
+      document.querySelector('.btn-primary').textContent = 'Salvar Filme';
     }
 
     function carregarFilmes() {
@@ -135,7 +186,7 @@
 
       // Monta a tabela com os filmes existentes
       let html = '<div class="table-wrapper"><table>';
-      html += '<tr><th>Título</th><th>Gênero</th><th>Classificação</th><th>Duração</th><th>Estreia</th></tr>';
+      html += '<tr><th>Título</th><th>Gênero</th><th>Classificação</th><th>Duração</th><th>Estreia</th><th>Ações</th></tr>';
       filmes.forEach(f => {
         html += `<tr>
           <td>${f.titulo}</td>
@@ -143,6 +194,10 @@
           <td><span class="badge">${f.classificacao}</span></td>
           <td>${f.duracao} min</td>
           <td>${formatarData(f.estreia)}</td>
+          <td>
+            <button class="btn-edit" onclick="editarFilme(${f.id})">Editar</button>
+            <button class="btn-delete" onclick="deletarFilme(${f.id})">Excluir</button>
+          </td>
         </tr>`;
       });
       html += '</table></div>';
@@ -152,6 +207,7 @@
     function limparFormulario() {
       ['titulo','genero','descricao','classificacao','duracao','estreia']
         .forEach(id => document.getElementById(id).value = '');
+      resetarEdicao();
     }
 
     function mostrarAlerta(msg, tipo) {

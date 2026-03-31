@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Venda de Ingressos - CineControl</title>
+  <title>Venda de Ingressos - Cinema Online</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <nav class="navbar">
-    <div class="nav-brand">🎬 CineControl</div>
+    <div class="nav-brand">🎬 Cinema Online</div>
     <ul class="nav-links">
       <li><a href="index.html">Início</a></li>
       <li><a href="cadastro-filmes.html">Filmes</a></li>
@@ -66,6 +66,8 @@
   </main>
 
   <script>
+    let editandoId = null;
+
     carregarOpcoesSessoes();
     carregarIngressos();
 
@@ -113,21 +115,39 @@
 
       const ingressos = JSON.parse(localStorage.getItem('ingressos') || '[]');
 
-      const novoIngresso = {
-        id: Date.now(),
-        sessaoId,
-        nomeCliente,
-        cpf,
-        assento,
-        pagamento
-      };
+      if (editandoId) {
+        // Atualizar ingresso existente
+        const index = ingressos.findIndex(i => i.id === editandoId);
+        if (index !== -1) {
+          ingressos[index] = {
+            id: editandoId,
+            sessaoId,
+            nomeCliente,
+            cpf,
+            assento,
+            pagamento
+          };
+          localStorage.setItem('ingressos', JSON.stringify(ingressos));
+          mostrarAlerta('Ingresso atualizado com sucesso!', 'success');
+        }
+      } else {
+        const novoIngresso = {
+          id: Date.now(),
+          sessaoId,
+          nomeCliente,
+          cpf,
+          assento,
+          pagamento
+        };
 
-      ingressos.push(novoIngresso);
-      localStorage.setItem('ingressos', JSON.stringify(ingressos));
+        ingressos.push(novoIngresso);
+        localStorage.setItem('ingressos', JSON.stringify(ingressos));
+        mostrarAlerta('Ingresso confirmado com sucesso!', 'success');
+      }
 
-      mostrarAlerta('Ingresso confirmado com sucesso!', 'success');
       limparFormulario();
       carregarIngressos();
+      resetarEdicao();
     }
 
     function carregarIngressos() {
@@ -142,7 +162,7 @@
       }
 
       let html = '<div class="table-wrapper"><table>';
-      html += '<tr><th>Cliente</th><th>CPF</th><th>Sessão</th><th>Assento</th><th>Pagamento</th></tr>';
+      html += '<tr><th>Cliente</th><th>CPF</th><th>Sessão</th><th>Assento</th><th>Pagamento</th><th>Ações</th></tr>';
 
       ingressos.forEach(i => {
         const sessao = sessoes.find(s => String(s.id) === String(i.sessaoId));
@@ -155,6 +175,10 @@
           <td>${info}</td>
           <td>${i.assento}</td>
           <td><span class="badge">${i.pagamento}</span></td>
+          <td>
+            <button class="btn-edit" onclick="editarIngresso(${i.id})">Editar</button>
+            <button class="btn-delete" onclick="deletarIngresso(${i.id})">Excluir</button>
+          </td>
         </tr>`;
       });
 
@@ -162,12 +186,40 @@
       div.innerHTML = html;
     }
 
+    function editarIngresso(id) {
+      const ingressos = JSON.parse(localStorage.getItem('ingressos') || '[]');
+      const ingresso = ingressos.find(i => i.id === id);
+      if (ingresso) {
+        document.getElementById('sessao').value = ingresso.sessaoId;
+        document.getElementById('nomeCliente').value = ingresso.nomeCliente;
+        document.getElementById('cpf').value = ingresso.cpf;
+        document.getElementById('assento').value = ingresso.assento;
+        document.getElementById('pagamento').value = ingresso.pagamento;
+        editandoId = id;
+        document.querySelector('.btn-primary').textContent = 'Atualizar Ingresso';
+      }
+    }
+
+    function deletarIngresso(id) {
+      if (confirm('Tem certeza que deseja excluir este ingresso?')) {
+        const ingressos = JSON.parse(localStorage.getItem('ingressos') || '[]');
+        const novosIngressos = ingressos.filter(i => i.id !== id);
+        localStorage.setItem('ingressos', JSON.stringify(novosIngressos));
+        mostrarAlerta('Ingresso excluído com sucesso!', 'success');
+        carregarIngressos();
+      }
+    }
+
+    function resetarEdicao() {
+      editandoId = null;
+      document.querySelector('.btn-primary').textContent = 'Confirmar Venda';
+    }
+
     function limparFormulario() {
       ['sessao','nomeCliente','cpf','assento','pagamento']
         .forEach(id => document.getElementById(id).value = '');
+      resetarEdicao();
     }
-
-    function mostrarAlerta(msg, tipo) {
       const el = document.getElementById('alerta');
       el.textContent = msg;
       el.className = `alert alert-${tipo}`;

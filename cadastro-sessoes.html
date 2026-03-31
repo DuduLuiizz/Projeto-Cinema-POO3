@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastro de Sessões - CineControl</title>
+  <title>Cadastro de Sessões - Cinema Online</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <nav class="navbar">
-    <div class="nav-brand">🎬 CineControl</div>
+    <div class="nav-brand">🎬 Cinema Online</div>
     <ul class="nav-links">
       <li><a href="index.html">Início</a></li>
       <li><a href="cadastro-filmes.html">Filmes</a></li>
@@ -77,6 +77,8 @@
   </main>
 
   <script>
+    let editandoId = null;
+
     // Ao carregar a página, popula os selects com dados do localStorage
     carregarOpcoesFilmes();
     carregarOpcoesSalas();
@@ -132,22 +134,41 @@
 
       const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
 
-      const novaSessao = {
-        id: Date.now(),
-        filmeId,
-        salaId,
-        dataHora,
-        preco: parseFloat(preco),
-        idioma,
-        formato
-      };
+      if (editandoId) {
+        // Atualizar sessão existente
+        const index = sessoes.findIndex(s => s.id === editandoId);
+        if (index !== -1) {
+          sessoes[index] = {
+            id: editandoId,
+            filmeId,
+            salaId,
+            dataHora,
+            preco: parseFloat(preco),
+            idioma,
+            formato
+          };
+          localStorage.setItem('sessoes', JSON.stringify(sessoes));
+          mostrarAlerta('Sessão atualizada com sucesso!', 'success');
+        }
+      } else {
+        const novaSessao = {
+          id: Date.now(),
+          filmeId,
+          salaId,
+          dataHora,
+          preco: parseFloat(preco),
+          idioma,
+          formato
+        };
 
-      sessoes.push(novaSessao);
-      localStorage.setItem('sessoes', JSON.stringify(sessoes));
+        sessoes.push(novaSessao);
+        localStorage.setItem('sessoes', JSON.stringify(sessoes));
+        mostrarAlerta('Sessão salva com sucesso!', 'success');
+      }
 
-      mostrarAlerta('Sessão salva com sucesso!', 'success');
       limparFormulario();
       carregarSessoes();
+      resetarEdicao();
     }
 
     function carregarSessoes() {
@@ -162,7 +183,7 @@
       }
 
       let html = '<div class="table-wrapper"><table>';
-      html += '<tr><th>Filme</th><th>Sala</th><th>Data/Hora</th><th>Preço</th><th>Idioma</th><th>Formato</th></tr>';
+      html += '<tr><th>Filme</th><th>Sala</th><th>Data/Hora</th><th>Preço</th><th>Idioma</th><th>Formato</th><th>Ações</th></tr>';
 
       sessoes.forEach(s => {
         // Busca os dados completos do filme e da sala pelo id armazenado na sessão
@@ -176,6 +197,10 @@
           <td>R$ ${parseFloat(s.preco).toFixed(2)}</td>
           <td>${s.idioma}</td>
           <td><span class="badge">${s.formato}</span></td>
+          <td>
+            <button class="btn-edit" onclick="editarSessao(${s.id})">Editar</button>
+            <button class="btn-delete" onclick="deletarSessao(${s.id})">Excluir</button>
+          </td>
         </tr>`;
       });
 
@@ -183,9 +208,40 @@
       div.innerHTML = html;
     }
 
+    function editarSessao(id) {
+      const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+      const sessao = sessoes.find(s => s.id === id);
+      if (sessao) {
+        document.getElementById('filme').value = sessao.filmeId;
+        document.getElementById('sala').value = sessao.salaId;
+        document.getElementById('dataHora').value = sessao.dataHora;
+        document.getElementById('preco').value = sessao.preco;
+        document.getElementById('idioma').value = sessao.idioma;
+        document.getElementById('formato').value = sessao.formato;
+        editandoId = id;
+        document.querySelector('.btn-primary').textContent = 'Atualizar Sessão';
+      }
+    }
+
+    function deletarSessao(id) {
+      if (confirm('Tem certeza que deseja excluir esta sessão?')) {
+        const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+        const novasSessoes = sessoes.filter(s => s.id !== id);
+        localStorage.setItem('sessoes', JSON.stringify(novasSessoes));
+        mostrarAlerta('Sessão excluída com sucesso!', 'success');
+        carregarSessoes();
+      }
+    }
+
+    function resetarEdicao() {
+      editandoId = null;
+      document.querySelector('.btn-primary').textContent = 'Salvar Sessão';
+    }
+
     function limparFormulario() {
       ['filme','sala','dataHora','preco','idioma','formato']
         .forEach(id => document.getElementById(id).value = '');
+      resetarEdicao();
     }
 
     function mostrarAlerta(msg, tipo) {

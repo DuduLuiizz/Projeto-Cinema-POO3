@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Cadastro de Salas - CineControl</title>
+  <title>Cadastro de Salas - Cinema Online</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <nav class="navbar">
-    <div class="nav-brand">🎬 CineControl</div>
+    <div class="nav-brand">🎬 Cinema Online</div>
     <ul class="nav-links">
       <li><a href="index.html">Início</a></li>
       <li><a href="cadastro-filmes.html">Filmes</a></li>
@@ -53,6 +53,8 @@
   </main>
 
   <script>
+    let editandoId = null;
+
     carregarSalas();
 
     function salvarSala() {
@@ -68,19 +70,62 @@
       // Recupera o array de salas salvo no localStorage
       const salas = JSON.parse(localStorage.getItem('salas') || '[]');
 
-      const novaSala = {
-        id: Date.now(),
-        nome,
-        capacidade: parseInt(capacidade),
-        tipo
-      };
+      if (editandoId) {
+        // Atualizar sala existente
+        const index = salas.findIndex(s => s.id === editandoId);
+        if (index !== -1) {
+          salas[index] = {
+            id: editandoId,
+            nome,
+            capacidade: parseInt(capacidade),
+            tipo
+          };
+          localStorage.setItem('salas', JSON.stringify(salas));
+          mostrarAlerta('Sala atualizada com sucesso!', 'success');
+        }
+      } else {
+        const novaSala = {
+          id: Date.now(),
+          nome,
+          capacidade: parseInt(capacidade),
+          tipo
+        };
 
-      salas.push(novaSala);
-      localStorage.setItem('salas', JSON.stringify(salas));
+        salas.push(novaSala);
+        localStorage.setItem('salas', JSON.stringify(salas));
+        mostrarAlerta('Sala salva com sucesso!', 'success');
+      }
 
-      mostrarAlerta('Sala salva com sucesso!', 'success');
       limparFormulario();
       carregarSalas();
+      resetarEdicao();
+    }
+
+    function editarSala(id) {
+      const salas = JSON.parse(localStorage.getItem('salas') || '[]');
+      const sala = salas.find(s => s.id === id);
+      if (sala) {
+        document.getElementById('nome').value = sala.nome;
+        document.getElementById('capacidade').value = sala.capacidade;
+        document.getElementById('tipo').value = sala.tipo;
+        editandoId = id;
+        document.querySelector('.btn-primary').textContent = 'Atualizar Sala';
+      }
+    }
+
+    function deletarSala(id) {
+      if (confirm('Tem certeza que deseja excluir esta sala?')) {
+        const salas = JSON.parse(localStorage.getItem('salas') || '[]');
+        const novasSalas = salas.filter(s => s.id !== id);
+        localStorage.setItem('salas', JSON.stringify(novasSalas));
+        mostrarAlerta('Sala excluída com sucesso!', 'success');
+        carregarSalas();
+      }
+    }
+
+    function resetarEdicao() {
+      editandoId = null;
+      document.querySelector('.btn-primary').textContent = 'Salvar Sala';
     }
 
     function carregarSalas() {
@@ -93,12 +138,16 @@
       }
 
       let html = '<div class="table-wrapper"><table>';
-      html += '<tr><th>Nome</th><th>Capacidade</th><th>Tipo</th></tr>';
+      html += '<tr><th>Nome</th><th>Capacidade</th><th>Tipo</th><th>Ações</th></tr>';
       salas.forEach(s => {
         html += `<tr>
           <td>${s.nome}</td>
           <td>${s.capacidade} lugares</td>
           <td><span class="badge">${s.tipo}</span></td>
+          <td>
+            <button class="btn-edit" onclick="editarSala(${s.id})">Editar</button>
+            <button class="btn-delete" onclick="deletarSala(${s.id})">Excluir</button>
+          </td>
         </tr>`;
       });
       html += '</table></div>';
@@ -107,6 +156,7 @@
 
     function limparFormulario() {
       ['nome', 'capacidade', 'tipo'].forEach(id => document.getElementById(id).value = '');
+      resetarEdicao();
     }
 
     function mostrarAlerta(msg, tipo) {
