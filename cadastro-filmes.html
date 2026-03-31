@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Filmes - CineControl</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🎬 CineControl</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Início</a></li>
+      <li><a href="cadastro-filmes.html" class="active">Filmes</a></li>
+      <li><a href="cadastro-salas.html">Salas</a></li>
+      <li><a href="cadastro-sessoes.html">Sessões</a></li>
+      <li><a href="venda-ingressos.html">Ingressos</a></li>
+      <li><a href="sessoes.html">Programação</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <h1 class="page-title">Cadastro de Filmes</h1>
+    <p class="page-subtitle">Preencha os dados do filme e clique em Salvar</p>
+
+    <div id="alerta" class="alert hidden"></div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label for="titulo">Título</label>
+        <input type="text" id="titulo" placeholder="Ex: Velozes e Furiosos 3: Desafio em Tóquio">
+      </div>
+
+      <div class="form-group">
+        <label for="genero">Gênero</label>
+        <select id="genero">
+          <option value="">-- Selecione --</option>
+          <option value="Ação">Ação</option>
+          <option value="Aventura">Aventura</option>
+          <option value="Comédia">Comédia</option>
+          <option value="Drama">Drama</option>
+          <option value="Terror">Terror</option>
+          <option value="Romance">Romance</option>
+          <option value="Ficção Científica">Ficção Científica</option>
+          <option value="Animação">Animação</option>
+          <option value="Documentário">Documentário</option>
+          <option value="Suspense">Suspense</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="descricao">Descrição</label>
+        <textarea id="descricao" placeholder="Breve sinopse do filme..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="classificacao">Classificação Indicativa</label>
+        <select id="classificacao">
+          <option value="">-- Selecione --</option>
+          <option value="Livre">Livre</option>
+          <option value="10 anos">10 anos</option>
+          <option value="12 anos">12 anos</option>
+          <option value="14 anos">14 anos</option>
+          <option value="16 anos">16 anos</option>
+          <option value="18 anos">18 anos</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="duracao">Duração (minutos)</label>
+        <input type="number" id="duracao" placeholder="Ex: 120" min="1">
+      </div>
+
+      <div class="form-group">
+        <label for="estreia">Data de Estreia</label>
+        <input type="date" id="estreia">
+      </div>
+
+      <button class="btn-primary" onclick="salvarFilme()">Salvar Filme</button>
+    </div>
+
+    <h2 style="color:#ffcc00; margin: 36px 0 12px;">Filmes Cadastrados</h2>
+    <div id="listaFilmes"></div>
+  </main>
+
+  <script>
+    // Carrega a lista de filmes ao abrir a página
+    carregarFilmes();
+
+    function salvarFilme() {
+      // Lê os valores dos campos do formulário
+      const titulo       = document.getElementById('titulo').value.trim();
+      const genero       = document.getElementById('genero').value;
+      const descricao    = document.getElementById('descricao').value.trim();
+      const classificacao= document.getElementById('classificacao').value;
+      const duracao      = document.getElementById('duracao').value;
+      const estreia      = document.getElementById('estreia').value;
+
+      // Validação: todos os campos são obrigatórios
+      if (!titulo || !genero || !descricao || !classificacao || !duracao || !estreia) {
+        mostrarAlerta('Preencha todos os campos!', 'error');
+        return;
+      }
+
+      // Recupera o array de filmes já salvo (ou cria um vazio)
+      const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
+
+      // Cria o objeto do novo filme com um id único
+      const novoFilme = {
+        id: Date.now(),
+        titulo,
+        genero,
+        descricao,
+        classificacao,
+        duracao: parseInt(duracao),
+        estreia
+      };
+
+      // Adiciona o novo filme ao array e salva de volta no localStorage
+      filmes.push(novoFilme);
+      localStorage.setItem('filmes', JSON.stringify(filmes));
+
+      mostrarAlerta('Filme salvo com sucesso!', 'success');
+      limparFormulario();
+      carregarFilmes();
+    }
+
+    function carregarFilmes() {
+      const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const div = document.getElementById('listaFilmes');
+
+      if (filmes.length === 0) {
+        div.innerHTML = '<div class="empty-state"><p>Nenhum filme cadastrado ainda.</p></div>';
+        return;
+      }
+
+      // Monta a tabela com os filmes existentes
+      let html = '<div class="table-wrapper"><table>';
+      html += '<tr><th>Título</th><th>Gênero</th><th>Classificação</th><th>Duração</th><th>Estreia</th></tr>';
+      filmes.forEach(f => {
+        html += `<tr>
+          <td>${f.titulo}</td>
+          <td>${f.genero}</td>
+          <td><span class="badge">${f.classificacao}</span></td>
+          <td>${f.duracao} min</td>
+          <td>${formatarData(f.estreia)}</td>
+        </tr>`;
+      });
+      html += '</table></div>';
+      div.innerHTML = html;
+    }
+
+    function limparFormulario() {
+      ['titulo','genero','descricao','classificacao','duracao','estreia']
+        .forEach(id => document.getElementById(id).value = '');
+    }
+
+    function mostrarAlerta(msg, tipo) {
+      const el = document.getElementById('alerta');
+      el.textContent = msg;
+      el.className = `alert alert-${tipo}`;
+      setTimeout(() => el.className = 'alert hidden', 3000);
+    }
+
+    function formatarData(dataStr) {
+      if (!dataStr) return '-';
+      const [y, m, d] = dataStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Sessões - CineControl</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🎬 CineControl</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Início</a></li>
+      <li><a href="cadastro-filmes.html">Filmes</a></li>
+      <li><a href="cadastro-salas.html">Salas</a></li>
+      <li><a href="cadastro-sessoes.html" class="active">Sessões</a></li>
+      <li><a href="venda-ingressos.html">Ingressos</a></li>
+      <li><a href="sessoes.html">Programação</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <h1 class="page-title">Cadastro de Sessões</h1>
+    <p class="page-subtitle">Vincule um filme a uma sala e defina horário e preço</p>
+
+    <div id="alerta" class="alert hidden"></div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label for="filme">Filme</label>
+        <!-- Este select é preenchido dinamicamente pelo JavaScript com filmes do localStorage -->
+        <select id="filme">
+          <option value="">-- Selecione um Filme --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sala">Sala</label>
+        <!-- Este select é preenchido dinamicamente pelo JavaScript com salas do localStorage -->
+        <select id="sala">
+          <option value="">-- Selecione uma Sala --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="dataHora">Data e Hora</label>
+        <input type="datetime-local" id="dataHora">
+      </div>
+
+      <div class="form-group">
+        <label for="preco">Preço (R$)</label>
+        <input type="number" id="preco" placeholder="Ex: 25.00" min="0" step="0.01">
+      </div>
+
+      <div class="form-group">
+        <label for="idioma">Idioma</label>
+        <select id="idioma">
+          <option value="">-- Selecione --</option>
+          <option value="Português">Português</option>
+          <option value="Áudio Original (Legendado)">Áudio Original (Legendado)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="formato">Formato</label>
+        <select id="formato">
+          <option value="">-- Selecione --</option>
+          <option value="2D">2D</option>
+          <option value="3D">3D</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="salvarSessao()">Salvar Sessão</button>
+    </div>
+
+    <h2 style="color:#ffcc00; margin: 36px 0 12px;">Sessões Cadastradas</h2>
+    <div id="listaSessoes"></div>
+  </main>
+
+  <script>
+    // Ao carregar a página, popula os selects com dados do localStorage
+    carregarOpcoesFilmes();
+    carregarOpcoesSalas();
+    carregarSessoes();
+
+    function carregarOpcoesFilmes() {
+      const filmes = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const select = document.getElementById('filme');
+
+      if (filmes.length === 0) {
+        select.innerHTML = '<option value="">Nenhum filme cadastrado</option>';
+        return;
+      }
+
+      // Para cada filme salvo, cria um <option> com id como valor e título como texto
+      filmes.forEach(f => {
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.textContent = f.titulo;
+        select.appendChild(option);
+      });
+    }
+
+    function carregarOpcoesSalas() {
+      const salas = JSON.parse(localStorage.getItem('salas') || '[]');
+      const select = document.getElementById('sala');
+
+      if (salas.length === 0) {
+        select.innerHTML = '<option value="">Nenhuma sala cadastrada</option>';
+        return;
+      }
+
+      salas.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = `${s.nome} (${s.tipo})`;
+        select.appendChild(option);
+      });
+    }
+
+    function salvarSessao() {
+      const filmeId  = document.getElementById('filme').value;
+      const salaId   = document.getElementById('sala').value;
+      const dataHora = document.getElementById('dataHora').value;
+      const preco    = document.getElementById('preco').value;
+      const idioma   = document.getElementById('idioma').value;
+      const formato  = document.getElementById('formato').value;
+
+      if (!filmeId || !salaId || !dataHora || !preco || !idioma || !formato) {
+        mostrarAlerta('Preencha todos os campos!', 'error');
+        return;
+      }
+
+      const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+
+      const novaSessao = {
+        id: Date.now(),
+        filmeId,
+        salaId,
+        dataHora,
+        preco: parseFloat(preco),
+        idioma,
+        formato
+      };
+
+      sessoes.push(novaSessao);
+      localStorage.setItem('sessoes', JSON.stringify(sessoes));
+
+      mostrarAlerta('Sessão salva com sucesso!', 'success');
+      limparFormulario();
+      carregarSessoes();
+    }
+
+    function carregarSessoes() {
+      const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+      const filmes  = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const salas   = JSON.parse(localStorage.getItem('salas') || '[]');
+      const div     = document.getElementById('listaSessoes');
+
+      if (sessoes.length === 0) {
+        div.innerHTML = '<div class="empty-state"><p>Nenhuma sessão cadastrada ainda.</p></div>';
+        return;
+      }
+
+      let html = '<div class="table-wrapper"><table>';
+      html += '<tr><th>Filme</th><th>Sala</th><th>Data/Hora</th><th>Preço</th><th>Idioma</th><th>Formato</th></tr>';
+
+      sessoes.forEach(s => {
+        // Busca os dados completos do filme e da sala pelo id armazenado na sessão
+        const filme = filmes.find(f => String(f.id) === String(s.filmeId));
+        const sala  = salas.find(sa => String(sa.id) === String(s.salaId));
+
+        html += `<tr>
+          <td>${filme ? filme.titulo : '?'}</td>
+          <td>${sala ? sala.nome : '?'}</td>
+          <td>${formatarDataHora(s.dataHora)}</td>
+          <td>R$ ${parseFloat(s.preco).toFixed(2)}</td>
+          <td>${s.idioma}</td>
+          <td><span class="badge">${s.formato}</span></td>
+        </tr>`;
+      });
+
+      html += '</table></div>';
+      div.innerHTML = html;
+    }
+
+    function limparFormulario() {
+      ['filme','sala','dataHora','preco','idioma','formato']
+        .forEach(id => document.getElementById(id).value = '');
+    }
+
+    function mostrarAlerta(msg, tipo) {
+      const el = document.getElementById('alerta');
+      el.textContent = msg;
+      el.className = `alert alert-${tipo}`;
+      setTimeout(() => el.className = 'alert hidden', 3000);
+    }
+
+    function formatarDataHora(str) {
+      if (!str) return '-';
+      const d = new Date(str);
+      return d.toLocaleString('pt-BR');
+    }
+  </script>
+</body>
+</html>

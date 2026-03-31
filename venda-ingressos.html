@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Venda de Ingressos - CineControl</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🎬 CineControl</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Início</a></li>
+      <li><a href="cadastro-filmes.html">Filmes</a></li>
+      <li><a href="cadastro-salas.html">Salas</a></li>
+      <li><a href="cadastro-sessoes.html">Sessões</a></li>
+      <li><a href="venda-ingressos.html" class="active">Ingressos</a></li>
+      <li><a href="sessoes.html">Programação</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <h1 class="page-title">Venda de Ingressos</h1>
+    <p class="page-subtitle">Selecione a sessão e informe os dados do cliente</p>
+
+    <div id="alerta" class="alert hidden"></div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label for="sessao">Sessão</label>
+        <!-- Select preenchido dinamicamente com sessões do localStorage -->
+        <select id="sessao">
+          <option value="">-- Selecione uma Sessão --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="nomeCliente">Nome do Cliente</label>
+        <input type="text" id="nomeCliente" placeholder="Nome completo">
+      </div>
+
+      <div class="form-group">
+        <label for="cpf">CPF</label>
+        <input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14">
+      </div>
+
+      <div class="form-group">
+        <label for="assento">Assento</label>
+        <input type="text" id="assento" placeholder="Ex: C04">
+      </div>
+
+      <div class="form-group">
+        <label for="pagamento">Forma de Pagamento</label>
+        <select id="pagamento">
+          <option value="">-- Selecione --</option>
+          <option value="Cartão">Cartão</option>
+          <option value="Pix">Pix</option>
+          <option value="Dinheiro">Dinheiro</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="confirmarVenda()">Confirmar Venda</button>
+    </div>
+
+    <h2 style="color:#ffcc00; margin: 36px 0 12px;">Ingressos Vendidos</h2>
+    <div id="listaIngressos"></div>
+  </main>
+
+  <script>
+    carregarOpcoesSessoes();
+    carregarIngressos();
+
+    // Verifica se veio redirecionado da página de sessões com uma sessão pré-selecionada
+    function carregarOpcoesSessoes() {
+      const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+      const filmes  = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const select  = document.getElementById('sessao');
+
+      if (sessoes.length === 0) {
+        select.innerHTML = '<option value="">Nenhuma sessão cadastrada</option>';
+        return;
+      }
+
+      sessoes.forEach(s => {
+        const filme = filmes.find(f => String(f.id) === String(s.filmeId));
+        const tituloFilme = filme ? filme.titulo : 'Filme desconhecido';
+
+        const option = document.createElement('option');
+        option.value = s.id;
+        // Exibe título do filme + data/hora no select
+        option.textContent = `${tituloFilme} — ${formatarDataHora(s.dataHora)} (R$ ${parseFloat(s.preco).toFixed(2)})`;
+        select.appendChild(option);
+      });
+
+      // Se a URL contém ?sessaoId=..., pré-seleciona a sessão correspondente
+      const params = new URLSearchParams(window.location.search);
+      const sessaoId = params.get('sessaoId');
+      if (sessaoId) {
+        select.value = sessaoId;
+      }
+    }
+
+    function confirmarVenda() {
+      const sessaoId    = document.getElementById('sessao').value;
+      const nomeCliente = document.getElementById('nomeCliente').value.trim();
+      const cpf         = document.getElementById('cpf').value.trim();
+      const assento     = document.getElementById('assento').value.trim();
+      const pagamento   = document.getElementById('pagamento').value;
+
+      if (!sessaoId || !nomeCliente || !cpf || !assento || !pagamento) {
+        mostrarAlerta('Preencha todos os campos!', 'error');
+        return;
+      }
+
+      const ingressos = JSON.parse(localStorage.getItem('ingressos') || '[]');
+
+      const novoIngresso = {
+        id: Date.now(),
+        sessaoId,
+        nomeCliente,
+        cpf,
+        assento,
+        pagamento
+      };
+
+      ingressos.push(novoIngresso);
+      localStorage.setItem('ingressos', JSON.stringify(ingressos));
+
+      mostrarAlerta('Ingresso confirmado com sucesso!', 'success');
+      limparFormulario();
+      carregarIngressos();
+    }
+
+    function carregarIngressos() {
+      const ingressos = JSON.parse(localStorage.getItem('ingressos') || '[]');
+      const sessoes   = JSON.parse(localStorage.getItem('sessoes') || '[]');
+      const filmes    = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const div       = document.getElementById('listaIngressos');
+
+      if (ingressos.length === 0) {
+        div.innerHTML = '<div class="empty-state"><p>Nenhum ingresso vendido ainda.</p></div>';
+        return;
+      }
+
+      let html = '<div class="table-wrapper"><table>';
+      html += '<tr><th>Cliente</th><th>CPF</th><th>Sessão</th><th>Assento</th><th>Pagamento</th></tr>';
+
+      ingressos.forEach(i => {
+        const sessao = sessoes.find(s => String(s.id) === String(i.sessaoId));
+        const filme  = sessao ? filmes.find(f => String(f.id) === String(sessao.filmeId)) : null;
+        const info   = filme ? `${filme.titulo} ${formatarDataHora(sessao.dataHora)}` : '?';
+
+        html += `<tr>
+          <td>${i.nomeCliente}</td>
+          <td>${i.cpf}</td>
+          <td>${info}</td>
+          <td>${i.assento}</td>
+          <td><span class="badge">${i.pagamento}</span></td>
+        </tr>`;
+      });
+
+      html += '</table></div>';
+      div.innerHTML = html;
+    }
+
+    function limparFormulario() {
+      ['sessao','nomeCliente','cpf','assento','pagamento']
+        .forEach(id => document.getElementById(id).value = '');
+    }
+
+    function mostrarAlerta(msg, tipo) {
+      const el = document.getElementById('alerta');
+      el.textContent = msg;
+      el.className = `alert alert-${tipo}`;
+      setTimeout(() => el.className = 'alert hidden', 3000);
+    }
+
+    function formatarDataHora(str) {
+      if (!str) return '-';
+      const d = new Date(str);
+      return d.toLocaleString('pt-BR');
+    }
+  </script>
+</body>
+</html>

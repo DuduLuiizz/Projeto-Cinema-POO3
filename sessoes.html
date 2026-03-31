@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Programação - CineControl</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🎬 CineControl</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Início</a></li>
+      <li><a href="cadastro-filmes.html">Filmes</a></li>
+      <li><a href="cadastro-salas.html">Salas</a></li>
+      <li><a href="cadastro-sessoes.html">Sessões</a></li>
+      <li><a href="venda-ingressos.html">Ingressos</a></li>
+      <li><a href="sessoes.html" class="active">Programação</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    <h1 class="page-title">Sessões Disponíveis</h1>
+    <p class="page-subtitle">Escolha uma sessão e clique em Comprar Ingresso</p>
+
+    <div id="listaSessoes"></div>
+  </main>
+
+  <script>
+    carregarSessoes();
+
+    function carregarSessoes() {
+      const sessoes = JSON.parse(localStorage.getItem('sessoes') || '[]');
+      const filmes  = JSON.parse(localStorage.getItem('filmes') || '[]');
+      const salas   = JSON.parse(localStorage.getItem('salas') || '[]');
+      const div     = document.getElementById('listaSessoes');
+
+      if (sessoes.length === 0) {
+        div.innerHTML = '<div class="empty-state"><p>Nenhuma sessão disponível. Cadastre sessões primeiro.</p></div>';
+        return;
+      }
+
+      let html = '<div class="table-wrapper"><table>';
+      html += '<tr><th>Filme</th><th>Sala</th><th>Data e Hora</th><th>Preço</th><th>Idioma</th><th>Formato</th><th>Ação</th></tr>';
+
+      sessoes.forEach(s => {
+        const filme = filmes.find(f => String(f.id) === String(s.filmeId));
+        const sala  = salas.find(sa => String(sa.id) === String(s.salaId));
+
+        html += `<tr>
+          <td>${filme ? filme.titulo : '?'}</td>
+          <td>${sala ? sala.nome : '?'}</td>
+          <td>${formatarDataHora(s.dataHora)}</td>
+          <td>R$ ${parseFloat(s.preco).toFixed(2)}</td>
+          <td>${s.idioma}</td>
+          <td><span class="badge">${s.formato}</span></td>
+          <td>
+            <a href="venda-ingressos.html?sessaoId=${s.id}" class="btn-secondary">
+              Comprar Ingresso
+            </a>
+          </td>
+        </tr>`;
+      });
+
+      html += '</table></div>';
+      div.innerHTML = html;
+    }
+
+    function formatarDataHora(str) {
+      if (!str) return '-';
+      const d = new Date(str);
+      return d.toLocaleString('pt-BR');
+    }
+  </script>
+</body>
+</html>
